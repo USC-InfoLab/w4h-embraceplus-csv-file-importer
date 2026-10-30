@@ -1,0 +1,32 @@
+# Test contract + live-run sample for this module.
+# Automated tests and in-app Run / ./run.sh use the tiny synthetic Cloud-tree
+# fixtures below. Do not copy real Empatica Cloud dumps into git.
+
+slug: w4h-embraceplus-csv-file-importer
+kind: ingest
+publisher: usc-infolab
+
+tests:
+  automated:
+    command: pytest tests/ -q -m "not integration"
+    sample:
+      kind: fixtures
+      path: tests/fixtures
+
+  live:
+    command: ./run.sh import
+    sample:
+      kind: fixtures
+      path: tests/fixtures
+
+inputs:
+  - key: dataset_id
+    type: dataset
+    create: empty
+  - key: dataset_title
+    type: text
+    default: EmbracePlus file-importer test
+    override: true
+  - key: files
+    type: files
+    required: false

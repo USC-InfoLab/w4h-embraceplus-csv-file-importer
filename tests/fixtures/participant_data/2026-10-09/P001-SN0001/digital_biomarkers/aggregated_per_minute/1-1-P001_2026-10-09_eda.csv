@@ -1,0 +1,3 @@
+timestamp_unix,timestamp_iso,participant_full_id,eda_scl_usiemens,missing_value_reason
+1728446400000,2026-10-09T00:00:00.000Z,demo-1-1-P001,0.11,
+1728446460000,2026-10-09T00:01:00.000Z,demo-1-1-P001,0.13,
