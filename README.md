@@ -63,7 +63,7 @@ Do not commit real Cloud downloads. `tests/fixtures/` is a tiny synthetic tree w
 
 ## How it works
 
-1. **Files** — Cloud dump or picked CSVs. **In-app Run / `./run.sh`** use [`contribution.yaml`](contribution.yaml) fixtures, not the notebook.
+1. **Files** — In **Select importer…**, drop the Cloud zips (one for the site, or one per participant) or choose the unzipped `participant_data` folder. Every day and participant in that drop loads into the one dataset. The importer opens the zips and keeps the per-minute CSVs. Avro and reports are ignored. **Load example** uses the tiny fixtures in [`contribution.yaml`](contribution.yaml), not your export.
 2. **Plan** — profiles locally, GeoMTS mapping, six checks, writes `manifest.yaml` when you pass `--data-dir`.
 3. **Import** — 500-row chunks to `csv-batch` with `table_prefix: "embrace"`. `@@PROGRESS@@` lines for the in-app bar.
 

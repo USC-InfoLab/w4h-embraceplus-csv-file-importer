@@ -7,6 +7,7 @@
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -42,8 +43,16 @@ def _print_plan(manifest: dict, review: dict) -> None:
 
 
 def _resolve_sources(args) -> tuple[Path, dict, bool]:
+    """In-app file drop sets W4H_PLAN_UPLOAD=1 and plans a folder with no manifest."""
     if getattr(args, "data_dir", None):
-        return Path(args.data_dir).resolve(), None, True
+        data_dir = Path(args.data_dir).resolve()
+        if (
+            os.environ.get("W4H_PLAN_UPLOAD") == "1"
+            and getattr(args, "command", None) == "import"
+            and not (data_dir / "manifest.yaml").is_file()
+        ):
+            return data_dir, plan_directory(data_dir), False
+        return data_dir, None, True
     source, paths, root = live_sample_paths()
     print(f"Using live sample from contribution.yaml ({source}):")
     for p in paths:

@@ -35,6 +35,26 @@ def test_infer_type():
     assert infer_type(["1728360000000"]) == "bigint"
 
 
+def test_plan_directory_reads_participant_zips(tmp_path):
+    import zipfile
+
+    first = tmp_path / "participant-a.zip"
+    second = tmp_path / "participant-b.zip"
+    csvs = sorted(FIXTURES.rglob("*.csv"))
+    with zipfile.ZipFile(first, "w") as archive:
+        archive.write(csvs[0], csvs[0].relative_to(FIXTURES).as_posix())
+        archive.writestr("participant_data/2026-10-08/P001-SN0001/digital_biomarkers/raw_data/x.avro", b"avro")
+        archive.writestr("../evil.csv", "nope\n")
+    with zipfile.ZipFile(second, "w") as archive:
+        for csv in csvs[1:]:
+            archive.write(csv, csv.relative_to(FIXTURES).as_posix())
+    manifest = plan_directory(tmp_path)
+    assert {s["slug"] for s in manifest["signals"]} == {"eda", "pulse_rate", "temperature"}
+    assert not list(tmp_path.rglob("*.avro"))
+    assert len(list(tmp_path.rglob("aggregated_per_minute/*.csv"))) == 4
+    assert not (tmp_path.parent / "evil.csv").exists()
+
+
 def test_plan_cloud_tree_groups_days():
     manifest = plan_directory(FIXTURES)
     assert manifest["vendor"] == "embraceplus"
@@ -42,7 +62,7 @@ def test_plan_cloud_tree_groups_days():
     assert eda["matched_shape"] == "embrace_eda"
     assert eda["sampling_interval"] == "1min"
     assert eda["geomts_mapping"]["subject"] == "participant_full_id"
-    assert eda["geomts_mapping"]["time"] == {"column": "timestamp_iso"}
+    assert eda["geomts_mapping"]["time"] == {"column": "timestamp_iso", "zone": "UTC"}
     assert [v["name"] for v in eda["geomts_mapping"]["values"]] == ["eda_scl_usiemens"]
     assert len(eda["files"]) == 2
     pr = _signal(manifest, "pulse_rate")

@@ -27,6 +27,21 @@ inputs:
     type: text
     default: EmbracePlus file-importer test
     override: true
+  # Select importer reads these fields. {dataset} is the catalog row name.
   - key: files
     type: files
     required: false
+    summary: Empatica EmbracePlus Cloud dump (not the E4). Choose one zip for the whole site, one zip per participant (select them all at once), or the unzipped participant_data folder.
+    note: Every participant and day loads into {dataset}. Pulse rate, EDA, temperature, and the other per-minute biomarkers each become one table. Avro files and reports are ignored. The command line is optional.
+    drop_label: Drop zip files or a folder
+    files_button: Choose zip files
+    folder_button: Choose folder
+    accept:
+      - csv
+      - zip
+    include: aggregated_per_minute/
+    detect:
+      - participant_data/
+      - aggregated_per_minute/
+    ignored: Avro and reports are not loaded.
+    empty: Drop the zip files, or choose the folder that contains the biomarker CSVs.

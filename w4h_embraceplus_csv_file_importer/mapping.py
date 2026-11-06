@@ -130,7 +130,7 @@ def build_signal(profile: dict) -> dict:
 
     time = None
     if iso:
-        time = {"column": iso}
+        time = {"column": iso, "zone": "UTC"}  # EmbracePlus ISO times are UTC (trailing Z)
         next(c for c in columns if c["name"] == iso)["type"] = "timestamp"
     elif date_col and time_col:
         time = {"combine": [date_col, time_col]}
@@ -228,8 +228,11 @@ def plan_files(csv_files: list[Path], data_dir: Path | None = None) -> dict:
 
 
 def plan_directory(data_dir: Path) -> dict:
-    """Profile Cloud per-minute CSVs under data_dir (nested dump or flat folder)."""
+    """Profile Cloud per-minute CSVs under data_dir (nested dump, flat folder, or zips)."""
+    from .archive import expand_zips
+
     data_dir = Path(data_dir)
+    expand_zips(data_dir)
     csv_files = discover_csv_files(data_dir)
     if not csv_files:
         raise FileNotFoundError(f"No EmbracePlus biomarker .csv files found in {data_dir}")

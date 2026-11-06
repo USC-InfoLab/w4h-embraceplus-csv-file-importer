@@ -9,7 +9,22 @@ DESCRIPTION = (
     "signal before importing. Do not commit real Cloud downloads."
 )
 
-_SOURCE = "https://www.empatica.com/"
+# Empatica "Data Access" manual (PRS-0000205 REV19, July 2024): one table per biomarker CSV.
+_MANUAL = "https://manuals.empatica.com/ehmp/careportal/data_access/v2.7/en.pdf"
+_BIOMARKERS_PAGE = 19  # "Digital biomarkers - CSV" section; used when a file has no page of its own
+_MANUAL_PAGES = {
+    "embrace_accelerometers_std": 19, "embrace_actigraphy_counts": 19, "embrace_activity_classification": 19,
+    "embrace_activity_counts": 20, "embrace_activity_intensity": 20, "embrace_body_position": 20,
+    "embrace_eda": 21, "embrace_gait_speed": 21, "embrace_double_support": 21,
+    "embrace_met": 22, "embrace_prv": 22, "embrace_pulse_rate": 22,
+    "embrace_respiratory_rate": 23, "embrace_sleep_detection": 23, "embrace_spo2": 23,
+    "embrace_step_counts": 24, "embrace_temperature": 28, "embrace_wearing_detection": 28,
+}
+
+
+def _source_url(shape: str) -> str:
+    return f"{_MANUAL}#page={_MANUAL_PAGES.get(shape, _BIOMARKERS_PAGE)}"
+
 
 _COLUMNS = {
     "participantfullid": {"description": "Organization, study, site, and participant id."},
@@ -20,13 +35,40 @@ _COLUMNS = {
     "timestamp_iso": {"description": "UTC sample time (ISO 8601)."},
     "missingvaluereason": {"description": "Why this minute has no biomarker value, when empty."},
     "missing_value_reason": {"description": "Why this minute has no biomarker value, when empty."},
+    # Text columns: kept as labels, described here so they show in the database and in-app help.
+    "activityclass": {"description": "Activity class for the minute (generic, running, still, walking)."},
+    "activityintensity": {
+        "description": "Activity intensity: sedentary, LPA (light), MPA (moderate) or VPA (vigorous).",
+    },
+    "bodypositionleft": {
+        "description": "Body position if worn on the left wrist. Use the column for the wrist the participant wore it on.",
+    },
+    "bodypositionright": {
+        "description": "Body position if worn on the right wrist. Use the column for the wrist the participant wore it on.",
+    },
+    "sleepdetectionstage": {
+        "description": "Sleep stage code: 0 = awake, 101 = sleep, 102 = wake, 300 = interruption (long wake during sleep).",
+    },
 }
 
 _VALUES = {
     "embrace_accelerometers_std": {
-        "accelerometersstdg": {"name": "accelerometers_std_g", "description": "Accelerometer magnitude SD", "unit": "g"},
+        "accelerometersstdg": {
+            "name": "accelerometers_std_g",
+            "description": "Standard deviation of the accelerometer magnitude over the minute (how much the wrist moved)",
+            "unit": "g",
+        },
+    },
+    "embrace_acticounts": {
+        "acticountsxaxis": {"name": "acticounts_x_axis", "description": "Activity counts X", "unit": "counts"},
+        "acticountsyaxis": {"name": "acticounts_y_axis", "description": "Activity counts Y", "unit": "counts"},
+        "acticountszaxis": {"name": "acticounts_z_axis", "description": "Activity counts Z", "unit": "counts"},
     },
     "embrace_actigraphy_counts": {
+        # Cloud headers are counts_x_axis etc.; the singular keys match older exports.
+        "countsxaxis": {"name": "counts_x_axis", "description": "Actigraphy counts X", "unit": "counts"},
+        "countsyaxis": {"name": "counts_y_axis", "description": "Actigraphy counts Y", "unit": "counts"},
+        "countszaxis": {"name": "counts_z_axis", "description": "Actigraphy counts Z", "unit": "counts"},
         "countxaxis": {"name": "count_x_axis", "description": "Actigraphy counts X", "unit": "counts"},
         "countyaxis": {"name": "count_y_axis", "description": "Actigraphy counts Y", "unit": "counts"},
         "countzaxis": {"name": "count_z_axis", "description": "Actigraphy counts Z", "unit": "counts"},
@@ -45,7 +87,11 @@ _VALUES = {
         "met": {"name": "met", "description": "Metabolic equivalent of task", "unit": "MET"},
     },
     "embrace_prv": {
-        "prvrmssdms": {"name": "prv_rmssd_ms", "description": "PRV RMSSD", "unit": "ms"},
+        "prvrmssdms": {
+            "name": "prv_rmssd_ms",
+            "description": "Pulse-rate variability: RMSSD of successive normal heartbeat intervals",
+            "unit": "ms",
+        },
     },
     "embrace_pulse_rate": {
         "pulseratebpm": {"name": "pulse_rate_bpm", "description": "Pulse rate", "unit": "bpm"},
@@ -57,7 +103,7 @@ _VALUES = {
         "spo2percentage": {"name": "spo2_percentage", "description": "SpO2", "unit": "%"},
     },
     "embrace_step_counts": {
-        "stepcounts": {"name": "step_counts", "description": "Step count", "unit": "counts"},
+        "stepcounts": {"name": "step_counts", "description": "Step count", "unit": "steps"},
     },
     "embrace_temperature": {
         "temperaturecelsius": {"name": "temperature_celsius", "description": "Skin temperature", "unit": "°C"},
@@ -70,7 +116,10 @@ _VALUES = {
         },
     },
     "embrace_sleep_detection": {
-        "sleepdetectionstage": {"name": "sleep_detection_stage", "description": "Sleep stage code"},
+        "sleepdetectionstage": {
+            "name": "sleep_detection_stage",
+            "description": "Sleep stage code: 0 = awake, 101 = sleep, 102 = wake, 300 = interruption (long wake during sleep)",
+        },
     },
 }
 
@@ -111,7 +160,7 @@ _DESCRIPTIONS = {
 SHAPES: dict[str, dict] = {
     name: {
         "description": desc,
-        "source_url": _SOURCE,
+        "source_url": _source_url(name),
         "sampling_interval": "1min",
         "columns": _COLUMNS,
         "values": _VALUES.get(name, {}),

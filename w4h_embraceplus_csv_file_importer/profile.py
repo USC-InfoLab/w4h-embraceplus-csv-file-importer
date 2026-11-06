@@ -8,6 +8,9 @@ from .shapes import keep_row
 
 DELIMITERS = [",", "\t", ";"]
 PREVIEW_ROWS = 20
+# EmbracePlus files often start with long runs of empty values (device not recording), so keep
+# reading until each column has PREVIEW_ROWS non-empty samples or this many rows were scanned.
+MAX_SCAN_ROWS = 20000
 TYPE_MATCH_THRESHOLD = 0.95
 INT4_MAX = 2147483647
 
@@ -48,22 +51,26 @@ def detect_delimiter(header_line: str) -> str:
 
 
 def profile_csv(path: Path, name: str | None = None) -> dict:
-    """Header, delimiter and inferred types from the first PREVIEW_ROWS kept rows."""
+    """Header, delimiter and inferred types from up to PREVIEW_ROWS non-empty values per column."""
     with Path(path).open(newline="", encoding="utf-8-sig") as f:
         first = f.readline()
         delimiter = detect_delimiter(first)
         f.seek(0)
         reader = csv.reader(f, delimiter=delimiter)
         headers = [h.strip() for h in next(reader, [])]
-        preview = []
+        samples: list[list[str]] = [[] for _ in headers]
+        scanned = 0
         for row in reader:
-            if keep_row(headers, row):
-                preview.append(row)
-            if len(preview) >= PREVIEW_ROWS:
+            if not keep_row(headers, row):
+                continue
+            scanned += 1
+            for i, column in enumerate(samples):
+                value = row[i].strip() if i < len(row) and row[i] is not None else ""
+                if value and len(column) < PREVIEW_ROWS:
+                    column.append(value)
+            if scanned >= MAX_SCAN_ROWS or all(len(c) >= PREVIEW_ROWS for c in samples):
                 break
-    inferred = [
-        infer_type([row[i] if i < len(row) else "" for row in preview]) for i in range(len(headers))
-    ]
+    inferred = [infer_type(column) for column in samples]
     return {
         "name": name or Path(path).name,
         "delimiter": delimiter,
